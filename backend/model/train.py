@@ -1,142 +1,164 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 import joblib
 import os
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, classification_report
-import xgboost as xgb
-import matplotlib.pyplot as plt
-import seaborn as sns
-import sys
+from pathlib import Path
+import logging
 
-# Add parent directory to path to import utils
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.preprocessing import load_and_preprocess_data
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-def train_models(data_path='../../data/heart.csv', model_path='model.pkl'):
-    """
-    Train multiple models and save the best one.
+def load_data():
+    """Load and prepare the heart disease dataset."""
+    try:
+        processed_dir = Path("C:/Users/DELL/Desktop/heart-xai-chatbot/data/processed")
+        encoders_dir = Path("C:/Users/DELL/Desktop/heart-xai-chatbot/backend/model/encoders")
+        encoders_dir.mkdir(parents=True, exist_ok=True)
+
+        if (processed_dir / "X_train.csv").exists():
+            logger.info("Loading processed data...")
+            X_train = pd.read_csv(processed_dir / "X_train.csv")
+            X_test = pd.read_csv(processed_dir / "X_test.csv")
+            y_train = pd.read_csv(processed_dir / "y_train.csv").values.ravel()
+            y_test = pd.read_csv(processed_dir / "y_test.csv").values.ravel()
+            return X_train, X_test, y_train, y_test
+
+        logger.info("Loading raw data...")
+        data_path = Path("../data/heart.csv")
+        if not data_path.exists():
+            logger.error(f"Data file not found: {data_path}")
+            return create_dummy_dataset()
+
+        data = pd.read_csv(data_path)
+
+        feature_names = ['Age', 'Sex', 'ChestPainType', 'RestingBP', 'Cholesterol',
+                         'FastingBS', 'RestingECG', 'MaxHR', 'ExerciseAngina', 'Oldpeak', 'ST_Slope']
+
+        X = data[feature_names]
+        y = data['HeartDisease']
+
+        # Encode categorical columns
+        categorical_cols = ['Sex', 'ChestPainType', 'RestingECG', 'ExerciseAngina', 'ST_Slope']
+        for col in categorical_cols:
+            le = LabelEncoder()
+            X[col] = le.fit_transform(X[col])
+            joblib.dump(le, encoders_dir / f"{col}_encoder.pkl")  # Save encoder
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        os.makedirs(processed_dir, exist_ok=True)
+        X_train.to_csv(processed_dir / "X_train.csv", index=False)
+        X_test.to_csv(processed_dir / "X_test.csv", index=False)
+        pd.DataFrame(y_train).to_csv(processed_dir / "y_train.csv", index=False)
+        pd.DataFrame(y_test).to_csv(processed_dir / "y_test.csv", index=False)
+
+        return X_train, X_test, y_train, y_test
+
+    except Exception as e:
+        logger.error(f"Error loading data: {str(e)}")
+        return create_dummy_dataset()
+
+def create_dummy_dataset():
+    """Create a simple dummy dataset for testing when real data is not available."""
+    features = ['Age', 'Sex', 'ChestPainType', 'RestingBP', 'Cholesterol',
+                'FastingBS', 'RestingECG', 'MaxHR', 'ExerciseAngina', 'Oldpeak', 'ST_Slope']
     
-    Args:
-        data_path: Path to the heart disease dataset
-        model_path: Path to save the best model
-    """
-    print("Loading and preprocessing data...")
-    X, y, feature_names, _ = load_and_preprocess_data(data_path)
+    np.random.seed(42)
+    n_samples = 100
+    X = pd.DataFrame(np.random.rand(n_samples, len(features)), columns=features)
+    y = np.random.randint(0, 2, size=n_samples)
     
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-    
-    print(f"Training data shape: {X_train.shape}")
-    print(f"Test data shape: {X_test.shape}")
-    
-    # Initialize models
-    models = {
-        'Logistic Regression': LogisticRegression(max_iter=1000, random_state=42),
-        'Random Forest': RandomForestClassifier(random_state=42),
-        'XGBoost': xgb.XGBClassifier(random_state=42)
-    }
-    
-    # Parameters for grid search
-    param_grids = {
-        'Logistic Regression': {
-            'C': [0.01, 0.1, 1, 10, 100],
-            'penalty': ['l1', 'l2'],
-            'solver': ['liblinear']
-        },
-        'Random Forest': {
-            'n_estimators': [50, 100, 200],
-            'max_depth': [None, 10, 20, 30],
-            'min_samples_split': [2, 5, 10]
-        },
-        'XGBoost': {
-            'learning_rate': [0.01, 0.1, 0.2],
-            'max_depth': [3, 5, 7],
-            'n_estimators': [50, 100, 200]
+    return train_test_split(X, y, test_size=0.2, random_state=42)
+
+def train_model(X_train, y_train):
+    """Train a machine learning model for heart disease prediction."""
+    try:
+        logger.info("Training model...")
+
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', RandomForestClassifier(random_state=42))
+        ])
+
+        param_grid = {
+            'classifier__n_estimators': [50, 100],
+            'classifier__max_depth': [10, 20]
         }
-    }
-    
-    # Train and evaluate models
-    best_models = {}
-    best_scores = {}
-    
-    for name, model in models.items():
-        print(f"\nTraining {name}...")
-        
-        # Perform grid search
+
         grid_search = GridSearchCV(
-            model, param_grids[name], cv=5, scoring='roc_auc', n_jobs=-1
+            pipeline, param_grid, cv=5, scoring='accuracy', n_jobs=-1
         )
         grid_search.fit(X_train, y_train)
-        
-        # Get best model
         best_model = grid_search.best_estimator_
-        best_models[name] = best_model
-        
-        # Predict on test set
-        y_pred = best_model.predict(X_test)
-        y_prob = best_model.predict_proba(X_test)[:, 1]
-        
-        # Calculate metrics
+
+        logger.info(f"Best hyperparameters: {grid_search.best_params_}")
+        return best_model
+
+    except Exception as e:
+        logger.error(f"Error training model: {str(e)}")
+        logger.info("Using default RandomForestClassifier")
+
+        fallback_model = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', RandomForestClassifier(random_state=42))
+        ])
+        fallback_model.fit(X_train, y_train)
+        return fallback_model
+
+def evaluate_model(model, X_test, y_test):
+    """Evaluate the trained model."""
+    try:
+        logger.info("Evaluating model...")
+
+        y_pred = model.predict(X_test)
+        y_prob = model.predict_proba(X_test)[:, 1]
+
         accuracy = accuracy_score(y_test, y_pred)
-        precision = precision_score(y_test, y_pred)
-        recall = recall_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
         roc_auc = roc_auc_score(y_test, y_prob)
-        
-        best_scores[name] = roc_auc
-        
-        print(f"Best parameters: {grid_search.best_params_}")
-        print(f"Test Accuracy: {accuracy:.4f}")
-        print(f"Test Precision: {precision:.4f}")
-        print(f"Test Recall: {recall:.4f}")
-        print(f"Test F1 Score: {f1:.4f}")
-        print(f"Test ROC AUC: {roc_auc:.4f}")
-        
-        # Cross-validation
-        cv_scores = cross_val_score(best_model, X, y, cv=5, scoring='roc_auc')
-        print(f"Cross-validation ROC AUC: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
-    
-    # Select the best model based on ROC AUC
-    best_model_name = max(best_scores, key=best_scores.get)
-    best_model = best_models[best_model_name]
-    
-    print(f"\nBest model: {best_model_name} with ROC AUC: {best_scores[best_model_name]:.4f}")
-    
-    # Save the best model
-    print(f"Saving best model to {model_path}...")
-    joblib.dump(best_model, model_path)
-    
-    # If the best model is Random Forest or XGBoost, plot feature importance
-    if best_model_name in ['Random Forest', 'XGBoost']:
-        plt.figure(figsize=(12, 8))
-        
-        if best_model_name == 'Random Forest':
-            importances = best_model.feature_importances_
-        else:  # XGBoost
-            importances = best_model.feature_importances_
-            
-        indices = np.argsort(importances)[::-1]
-        
-        plt.title(f"Feature Importance - {best_model_name}")
-        plt.bar(range(X.shape[1]), importances[indices], align='center')
-        plt.xticks(range(X.shape[1]), [feature_names[i] for i in indices], rotation=90)
-        plt.tight_layout()
-        plt.savefig(os.path.join(os.path.dirname(model_path), 'feature_importance.png'))
-    
-    return best_model, X_test, y_test
+
+        logger.info(f"Accuracy: {accuracy:.4f}")
+        logger.info(f"ROC AUC: {roc_auc:.4f}")
+        logger.info("\nClassification Report:")
+        logger.info(classification_report(y_test, y_pred))
+
+        return accuracy, roc_auc
+
+    except Exception as e:
+        logger.error(f"Error evaluating model: {str(e)}")
+        return 0, 0
+
+def save_model(model):
+    """Save the trained model to disk."""
+    try:
+        model_dir = Path("model")
+        model_dir.mkdir(exist_ok=True)
+
+        model_path = model_dir / "model.pkl"
+        joblib.dump(model, model_path)
+        logger.info(f"Model saved to {model_path}")
+
+    except Exception as e:
+        logger.error(f"Error saving model: {str(e)}")
+
+def main():
+    """Main function to train and save the heart disease prediction model."""
+    logger.info("Starting model training process...")
+
+    X_train, X_test, y_train, y_test = load_data()
+    model = train_model(X_train, y_train)
+    evaluate_model(model, X_test, y_test)
+    save_model(model)
+
+    logger.info("Model training process completed.")
 
 if __name__ == "__main__":
-    # Determine the script's directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.join(script_dir, '../../data/heart.csv')
-    model_path = os.path.join(script_dir, 'model.pkl')
-    
-    # Train models
-    best_model, X_test, y_test = train_models(data_path, model_path)
-    
-    print("Model training complete!")
+    main()

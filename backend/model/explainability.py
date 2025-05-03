@@ -1,191 +1,96 @@
-import joblib
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import os
 import shap
-import lime
-import lime.lime_tabular
-from sklearn.inspection import permutation_importance
-import sys
+from lime import lime_tabular
 
-# Add parent directory to path to import utils
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.preprocessing import load_and_preprocess_data
-
-def generate_feature_importance(model, X, feature_names, output_path='feature_importance.png'):
+def generate_explanation(patient_data, model, scaler, feature_names, X_scaled):
     """
-    Generate feature importance plot for tree-based models.
-    
+    Generate SHAP and LIME explanations for a patient's prediction.
+
     Args:
-        model: Trained model (Random Forest or XGBoost)
-        X: Feature dataset
-        feature_names: List of feature names
-        output_path: Path to save the plot
-    """
-    plt.figure(figsize=(12, 8))
-    
-    # Check if model has feature_importances_ attribute
-    if hasattr(model, 'feature_importances_'):
-        importances = model.feature_importances_
-        indices = np.argsort(importances)[::-1]
-        
-        plt.title("Feature Importance")
-        plt.bar(range(X.shape[1]), importances[indices], align='center')
-        plt.xticks(range(X.shape[1]), [feature_names[i] for i in indices], rotation=90)
-        plt.tight_layout()
-        plt.savefig(output_path)
-        
-        return pd.DataFrame({
-            'Feature': [feature_names[i] for i in indices],
-            'Importance': importances[indices]
-        })
-    else:
-        # For models without feature_importances_, use permutation importance
-        result = permutation_importance(model, X, y, n_repeats=10, random_state=42)
-        importances = result.importances_mean
-        indices = np.argsort(importances)[::-1]
-        
-        plt.title("Permutation Feature Importance")
-        plt.bar(range(X.shape[1]), importances[indices], align='center')
-        plt.xticks(range(X.shape[1]), [feature_names[i] for i in indices], rotation=90)
-        plt.tight_layout()
-        plt.savefig(output_path)
-        
-        return pd.DataFrame({
-            'Feature': [feature_names[i] for i in indices],
-            'Importance': importances[indices]
-        })
+        patient_data (pd.DataFrame): Patient features as a DataFrame
+        model: Trained ML model
+        scaler: Feature scaler used during training
+        feature_names (list): List of feature names
+        X_scaled (np.ndarray): Scaled training data for LIME and SHAP background
 
-def generate_shap_explanations(model, X, feature_names, output_dir='shap_plots'):
+    Returns:
+        dict: Dictionary containing prediction and explanations
     """
-    Generate SHAP explanations for the model.
-    
-    Args:
-        model: Trained model
-        X: Feature dataset
-        feature_names: List of feature names
-        output_dir: Directory to save the plots
-    """
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Create SHAP explainer
-    explainer = shap.Explainer(model)
-    shap_values = explainer(X)
-    
-    # Summary plot
-    plt.figure(figsize=(12, 8))
-    shap.summary_plot(shap_values, X, feature_names=feature_names, show=False)
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'shap_summary.png'))
-    plt.close()
-    
-    # Bar plot
-    plt.figure(figsize=(12, 8))
-    shap.summary_plot(shap_values, X, feature_names=feature_names, plot_type='bar', show=False)
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'shap_bar.png'))
-    plt.close()
-    
-    # Force plots for a few samples
-    for i in range(min(5, X.shape[0])):
-        plt.figure(figsize=(16, 3))
-        shap.plots.force(shap_values[i], matplotlib=True, show=False)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f'shap_force_{i}.png'))
-        plt.close()
-    
-    return shap_values
+    try:
+        # Scale the input data
+        patient_data_scaled = scaler.transform(patient_data)
 
-def generate_lime_explanation(model, X, feature_names, class_names=['No Disease', 'Disease'], sample_index=0, output_path='lime_explanation.png'):
-    """
-    Generate LIME explanation for a specific sample.
-    
-    Args:
-        model: Trained model
-        X: Feature dataset
-        feature_names: List of feature names
-        class_names: List of class names
-        sample_index: Index of the sample to explain
-        output_path: Path to save the plot
-    """
-    # Create LIME explainer
-    explainer = lime.lime_tabular.LimeTabularExplainer(
-        training_data=np.array(X),
-        feature_names=feature_names,
-        class_names=class_names,
-        mode='classification'
-    )
-    
-    # Explain a specific instance
-    sample = X.iloc[sample_index].values
-    explanation = explainer.explain_instance(
-        sample, 
-        model.predict_proba,
-        num_features=10
-    )
-    
-    # Save explanation as figure
-    fig = explanation.as_pyplot_figure(label=1)
-    fig.tight_layout()
-    fig.savefig(output_path)
-    plt.close(fig)
-    
-    return explanation
+        # Make prediction
+        prediction = model.predict(patient_data_scaled)[0]
+        probability = model.predict_proba(patient_data_scaled)[0, 1]
 
-def generate_all_explanations(model_path='model.pkl', data_path='../../data/heart.csv', output_dir='xai_results'):
-    """
-    Generate all XAI explanations for the model.
-    
-    Args:
-        model_path: Path to the trained model
-        data_path: Path to the dataset
-        output_dir: Directory to save the explanations
-    """
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Load model
-    model = joblib.load(model_path)
-    
-    # Load data
-    X, y, feature_names, _ = load_and_preprocess_data(data_path)
-    
-    # Generate feature importance
-    feature_importance = generate_feature_importance(
-        model, X, feature_names, 
-        output_path=os.path.join(output_dir, 'feature_importance.png')
-    )
-    
-    # Generate SHAP explanations
-    shap_values = generate_shap_explanations(
-        model, X, feature_names,
-        output_dir=os.path.join(output_dir, 'shap_plots')
-    )
-    
-    # Generate LIME explanations
-    lime_explanation = generate_lime_explanation(
-        model, X, feature_names,
-        output_path=os.path.join(output_dir, 'lime_explanation.png')
-    )
-    
-    print(f"XAI explanations generated and saved to {output_dir}")
-    
-    return {
-        'feature_importance': feature_importance,
-        'shap_values': shap_values,
-        'lime_explanation': lime_explanation
-    }
+        # Initialize SHAP explainer
+        try:
+            if hasattr(model, 'feature_importances_'):
+                explainer = shap.TreeExplainer(model)
+            else:
+                # Use a subset of the training data as background
+                background_data = shap.sample(X_scaled, 100)
+                explainer = shap.KernelExplainer(model.predict_proba, background_data)
+        except Exception as e:
+            raise ValueError(f"Error initializing SHAP explainer: {e}")
 
-if __name__ == "__main__":
-    # Determine the script's directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(script_dir, 'model.pkl')
-    data_path = os.path.join(script_dir, '../../data/heart.csv')
-    output_dir = os.path.join(script_dir, 'xai_results')
-    
-    # Generate explanations
-    explanations = generate_all_explanations(model_path, data_path, output_dir)
-    
-    print("Explainability analysis complete!")
+        # Calculate SHAP values
+        shap_values = explainer.shap_values(patient_data_scaled)
+
+        # For binary classification, some models return a list
+        if isinstance(shap_values, list):
+            shap_values = shap_values[1]  # For the positive class
+
+        # Get SHAP values as dictionary
+        shap_dict = {feature: float(value) for feature, value in zip(feature_names, shap_values[0])}
+
+        # Initialize LIME explainer
+        try:
+            lime_explainer = lime_tabular.LimeTabularExplainer(
+                X_scaled,
+                feature_names=feature_names,
+                class_names=['No Heart Disease', 'Heart Disease'],
+                mode='classification'
+            )
+
+            # Generate LIME explanation
+            lime_exp = lime_explainer.explain_instance(
+                patient_data_scaled[0],
+                model.predict_proba,
+                num_features=len(feature_names),
+                top_labels=1
+            )
+
+            # Extract LIME explanation as list of (feature, weight) tuples
+            lime_list = lime_exp.as_list(label=1)
+            lime_explanation = [{'feature': item[0], 'weight': float(item[1])} for item in lime_list]
+        except Exception as e:
+            raise ValueError(f"Error generating LIME explanation: {e}")
+
+        # Get global feature importance if available
+        if hasattr(model, 'feature_importances_'):
+            feature_importance = {feature: float(importance) 
+                                  for feature, importance in zip(feature_names, model.feature_importances_)}
+        elif hasattr(model, 'coef_'):
+            feature_importance = {feature: float(abs(coef)) 
+                                  for feature, coef in zip(feature_names, model.coef_[0])}
+        else:
+            feature_importance = {feature: 0.0 for feature in feature_names}  # Default to 0 if unavailable
+
+        # Create explanation dictionary
+        explanation = {
+            'prediction': int(prediction),
+            'probability': float(probability),
+            'shap_values': shap_dict,
+            'feature_importance': feature_importance,
+            'lime_explanation': lime_explanation,
+            'expected_value': float(explainer.expected_value if not hasattr(explainer, 'expected_value') 
+                                  else explainer.expected_value[1])
+        }
+
+        return explanation
+
+    except Exception as e:
+        raise ValueError(f"Error generating explanation: {e}")

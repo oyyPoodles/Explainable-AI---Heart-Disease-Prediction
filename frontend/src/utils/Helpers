@@ -1,0 +1,53 @@
+/**
+ * Formats a number to a percentage string with one decimal place.
+ * @param {number} value - The number to format.
+ * @returns {string} - The formatted percentage string.
+ */
+export const formatPercentage = (value) => {
+  return `${value.toFixed(1)}%`;
+};
+
+/**
+ * Validates if a given value is a positive number.
+ * @param {number} value - The value to validate.
+ * @returns {boolean} - True if the value is a positive number, false otherwise.
+ */
+export const isPositiveNumber = (value) => {
+  return !isNaN(value) && value > 0;
+};
+
+/**
+ * Capitalizes the first letter of a string.
+ * @param {string} str - The string to capitalize.
+ * @returns {string} - The capitalized string.
+ */
+export const capitalizeFirstLetter = (str) => {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+/**
+ * Maps risk levels to a color for UI purposes.
+ * @param {number} risk - The risk level (0-100).
+ * @returns {string} - The corresponding color.
+ */
+export const getRiskColor = (risk) => {
+  if (risk > 75) return '#f5222d'; // High risk (red)
+  if (risk > 50) return '#fa8c16'; // Moderate risk (orange)
+  if (risk > 25) return '#faad14'; // Low risk (yellow)
+  return '#52c41a'; // Minimal risk (green)
+};
+
+/**
+ * Debounces a function to limit how often it can be called.
+ * @param {Function} func - The function to debounce.
+ * @param {number} delay - The debounce delay in milliseconds.
+ * @returns {Function} - The debounced function.
+ */
+export const debounce = (func, delay) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), delay);
+  };
+};

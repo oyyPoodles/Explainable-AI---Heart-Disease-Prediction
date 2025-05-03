@@ -4,7 +4,8 @@ import './Footer.css';
 const Footer = () => {
     return (
         <footer className="footer">
-            <div className="footer-content">
+            <div className="footer-container">
+                {/* About Section */}
                 <div className="footer-section">
                     <h3>Heart Disease XAI Chatbot</h3>
                     <p>
@@ -13,13 +14,35 @@ const Footer = () => {
                         transparent, explainable predictions.
                     </p>
                 </div>
+
+                {/* References Section */}
                 <div className="footer-section">
                     <h3>References</h3>
                     <ul>
-                        <li><a href="https://www.heart.org/" target="_blank" rel="noopener noreferrer">American Heart Association</a></li>
-                        <li><a href="https://www.who.int/health-topics/cardiovascular-diseases" target="_blank" rel="noopener noreferrer">WHO - Cardiovascular Diseases</a></li>
+                        <li>
+                            <a
+                                href="https://www.heart.org/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="footer-link"
+                            >
+                                American Heart Association
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="https://www.who.int/health-topics/cardiovascular-diseases"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="footer-link"
+                            >
+                                WHO - Cardiovascular Diseases
+                            </a>
+                        </li>
                     </ul>
                 </div>
+
+                {/* Disclaimer Section */}
                 <div className="footer-section">
                     <h3>Disclaimer</h3>
                     <p>
@@ -29,8 +52,10 @@ const Footer = () => {
                     </p>
                 </div>
             </div>
+
+            {/* Footer Bottom Section */}
             <div className="footer-bottom">
-                <p>&copy; {new Date().getFullYear()} Heart Disease XAI Project</p>
+                <p>&copy; {new Date().getFullYear()} Heart Disease XAI Project. All rights reserved.</p>
             </div>
         </footer>
     );

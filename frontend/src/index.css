@@ -1,26 +1,29 @@
+/* Global Styles */
 body {
   margin: 0;
   font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f5f7fa;
   color: #333;
+  line-height: 1.6;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Container */
 .container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 15px;
+  box-sizing: border-box;
 }
 
+/* Card Component */
 .card {
   background: white;
   border-radius: 8px;
@@ -29,10 +32,13 @@ code {
   margin-bottom: 20px;
 }
 
+/* Headings */
 h1, h2, h3, h4, h5, h6 {
   color: #2c3e50;
+  margin-bottom: 15px;
 }
 
+/* Buttons */
 button {
   background-color: #4a6fa5;
   color: white;
@@ -41,11 +47,12 @@ button {
   padding: 10px 15px;
   cursor: pointer;
   font-size: 16px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 button:hover {
   background-color: #345785;
+  transform: scale(1.05);
 }
 
 button:disabled {
@@ -53,6 +60,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Inputs and Selects */
 input, select {
   width: 100%;
   padding: 10px;
@@ -61,8 +69,16 @@ input, select {
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
+  font-size: 1rem;
 }
 
+input:focus, select:focus {
+  border-color: #4a6fa5;
+  box-shadow: 0 0 5px rgba(74, 111, 165, 0.5);
+  outline: none;
+}
+
+/* Form Groups */
 .form-group {
   margin-bottom: 15px;
 }
@@ -73,6 +89,7 @@ label {
   display: block;
 }
 
+/* Form Layout */
 .form-row {
   display: flex;
   flex-wrap: wrap;
@@ -87,9 +104,30 @@ label {
   padding-left: 10px;
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
   .form-col {
     flex: 0 0 100%;
     max-width: 100%;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 0.9rem;
+  }
+
+  .container {
+    padding: 0 10px;
+  }
+
+  input, select {
+    font-size: 0.9rem;
+    padding: 8px;
   }
 }

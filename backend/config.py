@@ -8,16 +8,20 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 # Data paths
-DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), "data")
-HEART_DATA_PATH = os.path.join(DATA_DIR, "heart.csv")
-PROCESSED_DATA_DIR = os.path.join(DATA_DIR, "processed")
+DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR.parent / "data"))
+HEART_DATA_PATH = DATA_DIR / "heart.csv"
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
 
 # Model paths
-MODEL_DIR = os.path.join(BASE_DIR, "model")
-MODEL_PATH = os.path.join(MODEL_DIR, "model.pkl")
-SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
-FEATURE_NAMES_PATH = os.path.join(MODEL_DIR, "feature_names.pkl")
-BACKGROUND_DATA_PATH = os.path.join(MODEL_DIR, "background_data.pkl")
+MODEL_DIR = Path(os.getenv("MODEL_DIR", BASE_DIR / "model"))
+MODEL_PATH = MODEL_DIR / "model.pkl"
+SCALER_PATH = MODEL_DIR / "scaler.pkl"
+FEATURE_NAMES_PATH = MODEL_DIR / "feature_names.pkl"
+BACKGROUND_DATA_PATH = MODEL_DIR / "background_data.pkl"
+
+# Ensure critical directories exist
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 # API settings
 API_TITLE = "Heart Disease Prediction API"
@@ -50,6 +54,6 @@ FEATURE_DESCRIPTIONS = {
 }
 
 # Model training settings
-RANDOM_STATE = 42
-TEST_SIZE = 0.2
-VAL_SIZE = 0.25
+RANDOM_STATE = int(os.getenv("RANDOM_STATE", 42))
+TEST_SIZE = float(os.getenv("TEST_SIZE", 0.2))
+VAL_SIZE = float(os.getenv("VAL_SIZE", 0.25))

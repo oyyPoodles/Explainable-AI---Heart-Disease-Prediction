@@ -16,12 +16,12 @@ const Predict = () => {
         setIsLoading(true);
         setError(null);
         setPatientData(formData);
-        
+
         try {
             // Get prediction
             const predictionResult = await predictHeartDisease(formData);
             setPrediction(predictionResult);
-            
+
             // Get explanation
             const explanationResult = await getExplanation(formData);
             setExplanation(explanationResult);
@@ -44,8 +44,8 @@ const Predict = () => {
 
     return (
         <div className="predict-container">
-            <h1>Heart Disease Risk Assessment</h1>
-            
+            <h1 className="predict-title">Heart Disease Risk Assessment</h1>
+
             {error && (
                 <div className="error-message">
                     <p>{error}</p>
@@ -54,7 +54,7 @@ const Predict = () => {
                     </button>
                 </div>
             )}
-            
+
             {!prediction ? (
                 <div className="form-section">
                     <p className="intro-text">
@@ -71,26 +71,20 @@ const Predict = () => {
                             Start Over
                         </button>
                     </div>
-                    
-                    <PredictionResult 
-                        prediction={prediction} 
-                        patientData={patientData} 
-                    />
-                    
+
+                    <PredictionResult prediction={prediction} patientData={patientData} />
+
                     {explanation && (
-                        <>
+                        <div className="explanation-section">
                             <h3>Understanding Your Prediction</h3>
                             <p className="explanation-intro">
                                 Below are visualizations that explain which factors influenced your risk assessment.
                                 Factors pushing your risk higher are shown in red, while protective factors are shown in green.
                             </p>
-                            <ExplanationCharts 
-                                explanation={explanation} 
-                                patientData={patientData} 
-                            />
-                        </>
+                            <ExplanationCharts explanation={explanation} patientData={patientData} />
+                        </div>
                     )}
-                    
+
                     <div className="disclaimer-box">
                         <h4>Medical Disclaimer</h4>
                         <p>

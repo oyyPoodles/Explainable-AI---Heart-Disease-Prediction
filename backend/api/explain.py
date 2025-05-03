@@ -9,19 +9,26 @@ import lime.lime_tabular
 from typing import List, Dict, Any
 import os
 import json
-from api.predict import PatientData
-from utils.preprocessing import preprocess_input
+from backend.api.predict import PatientData  # Corrected import
+from backend.utils.preprocessing import preprocess_input  # Corrected import
 
 router = APIRouter()
 
-# Load the model and explainers
+# Load the model
 MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "model", "model.pkl")
 try:
     model = joblib.load(MODEL_PATH)
-    # Initialize explainers (will actually be created per-request)
 except Exception as e:
     print(f"Error loading model: {e}")
     model = None
+
+# Initialize SHAP explainer (global initialization for tree-based models)
+shap_explainer = None
+if model:
+    try:
+        shap_explainer = shap.Explainer(model)
+    except Exception as e:
+        print(f"Error initializing SHAP explainer: {e}")
 
 class FeatureImportance(BaseModel):
     feature: str
@@ -53,29 +60,26 @@ async def explain_prediction(patient_data: PatientData):
         prediction = 1 if probability >= 0.5 else 0
         
         # Generate SHAP explanation
-        explainer = shap.Explainer(model)
-        shap_values = explainer(processed_input)
+        if shap_explainer is None:
+            raise HTTPException(status_code=500, detail="SHAP explainer not initialized")
+        
+        shap_values = shap_explainer(processed_input)
         
         # Format SHAP values for response
-        formatted_shap = []
-        for i, feature in enumerate(feature_names):
-            formatted_shap.append({
-                "feature": feature,
-                "value": float(shap_values.values[0][i])
-            })
+        formatted_shap = [
+            {"feature": feature, "value": float(shap_values.values[0][i])}
+            for i, feature in enumerate(feature_names)
+        ]
         
         # Feature importance (using absolute SHAP values)
-        feature_importance = []
-        for i, feature in enumerate(feature_names):
-            importance = float(abs(shap_values.values[0][i]))
-            direction = "positive" if shap_values.values[0][i] > 0 else "negative"
-            feature_importance.append(
-                FeatureImportance(
-                    feature=feature,
-                    importance=importance,
-                    direction=direction
-                )
+        feature_importance = [
+            FeatureImportance(
+                feature=feature,
+                importance=float(abs(shap_values.values[0][i])),
+                direction="positive" if shap_values.values[0][i] > 0 else "negative"
             )
+            for i, feature in enumerate(feature_names)
+        ]
         
         # Sort feature importance by absolute value
         feature_importance.sort(key=lambda x: x.importance, reverse=True)

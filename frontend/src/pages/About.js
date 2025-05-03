@@ -4,6 +4,7 @@ import './About.css';
 const About = () => {
     return (
         <div className="about-container">
+            {/* Header Section */}
             <section className="about-header">
                 <h1>About This Project</h1>
                 <p>
@@ -12,6 +13,7 @@ const About = () => {
                 </p>
             </section>
 
+            {/* Heart Disease Challenge Section */}
             <section className="about-section">
                 <h2>The Heart Disease Challenge</h2>
                 <p>
@@ -26,6 +28,7 @@ const About = () => {
                 </p>
             </section>
 
+            {/* Explainable AI Section */}
             <section className="about-section">
                 <h2>Our Approach: Explainable AI</h2>
                 <p>
@@ -39,7 +42,7 @@ const About = () => {
                 </p>
                 <ul>
                     <li>
-                        <strong>SHAP (SHapley Additive exPlanations)</strong> - A game theoretic approach
+                        <strong>SHAP (SHapley Additive exPlanations)</strong> - A game-theoretic approach
                         to explain the output of any machine learning model by calculating the contribution
                         of each feature to the prediction.
                     </li>
@@ -54,6 +57,7 @@ const About = () => {
                 </p>
             </section>
 
+            {/* Dataset Section */}
             <section className="about-section">
                 <h2>The Dataset</h2>
                 <p>
@@ -79,6 +83,7 @@ const About = () => {
                 </p>
             </section>
 
+            {/* Technology Stack Section */}
             <section className="about-section">
                 <h2>Technology Stack</h2>
                 <p>This application is built using modern web and data science technologies:</p>
@@ -92,6 +97,7 @@ const About = () => {
                 </ul>
             </section>
 
+            {/* Disclaimer Section */}
             <section className="about-section disclaimer">
                 <h2>Important Disclaimer</h2>
                 <p>

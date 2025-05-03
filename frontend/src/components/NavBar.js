@@ -4,31 +4,30 @@ import './NavBar.css';
 
 const NavBar = () => {
     const location = useLocation();
-    
+
+    const navLinks = [
+        { path: '/', label: 'Home' },
+        { path: '/predict', label: 'Predict' },
+        { path: '/about', label: 'About' },
+    ];
+
     return (
         <nav className="navbar">
             <div className="navbar-brand">
-                <h1>Heart Disease AI</h1>
+                <Link to="/" className="navbar-logo">
+                    <h1>Heart Disease AI</h1>
+                </Link>
             </div>
             <div className="navbar-links">
-                <Link 
-                    to="/" 
-                    className={location.pathname === '/' ? 'active' : ''}
-                >
-                    Home
-                </Link>
-                <Link 
-                    to="/predict" 
-                    className={location.pathname === '/predict' ? 'active' : ''}
-                >
-                    Predict
-                </Link>
-                <Link 
-                    to="/about" 
-                    className={location.pathname === '/about' ? 'active' : ''}
-                >
-                    About
-                </Link>
+                {navLinks.map((link) => (
+                    <Link
+                        key={link.path}
+                        to={link.path}
+                        className={`navbar-link ${location.pathname === link.path ? 'active' : ''}`}
+                    >
+                        {link.label}
+                    </Link>
+                ))}
             </div>
         </nav>
     );
